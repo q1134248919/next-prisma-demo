@@ -1,34 +1,50 @@
-import NextAuth from 'next-auth';
-import { PrismaAdapter } from '@auth/prisma-adapter';
-import prisma from './prisma/prisma';
-import github from 'next-auth/providers/github';
-import google from 'next-auth/providers/google';
-import CredentialsProvider from 'next-auth/providers/credentials';
-import bcrypt from 'bcryptjs';
+import NextAuth from "next-auth";
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import prisma from "./prisma/prisma";
+import github from "next-auth/providers/github";
+import google from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  session: { strategy: 'jwt' },
+export const authConfig = NextAuth({
+  session: { strategy: "jwt" },
   adapter: PrismaAdapter(prisma),
   pages: {
-    signIn: '/login',
+    signIn: "/login",
   },
   providers: [
     github,
     google,
     CredentialsProvider({
-      name: 'Sign in',
-      id: 'credentials',
+      name: "Sign in",
+      id: "credentials",
       credentials: {
         email: {
-          label: 'Email',
-          type: 'email',
-          placeholder: 'example@example.com',
+          label: "Email",
+          type: "email",
+          placeholder: "example@example.com",
         },
-        password: { label: 'Password', type: 'password' },
+        password: { label: "Password", type: "password" },
+        name: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials.password) {
-          return null;
+          throw new Error("未填寫完整");
+        }
+        if (credentials.name && credentials?.email) {
+          const user = await prisma.user.findUnique({
+            where: {
+              email: String(credentials.email),
+            },
+          });
+          if (user) {
+            return {
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              randomKey: "Hey cool",
+            };
+          }
         }
 
         const user = await prisma.user.findUnique({
@@ -41,29 +57,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           !user ||
           !(await bcrypt.compare(String(credentials.password), user.password!))
         ) {
-          return null;
+          throw new Error("賬號密碼錯誤");
         }
 
         return {
           id: user.id,
           email: user.email,
           name: user.name,
-          randomKey: 'Hey cool',
+          randomKey: "Hey cool",
         };
       },
     }),
   ],
+
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
-      const paths = ['/profile', '/client-side'];
+      const paths = ["/profile", "/client-side"];
       const isProtected = paths.some((path) =>
         nextUrl.pathname.startsWith(path)
       );
 
       if (isProtected && !isLoggedIn) {
-        const redirectUrl = new URL('/api/auth/signin', nextUrl.origin);
-        redirectUrl.searchParams.append('callbackUrl', nextUrl.href);
+        const redirectUrl = new URL("/login", nextUrl.origin);
+        redirectUrl.searchParams.append("callbackUrl", nextUrl.href);
         return Response.redirect(redirectUrl);
       }
       return true;
@@ -91,3 +108,5 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 });
+
+export const { handlers, auth, signIn, signOut } = authConfig;

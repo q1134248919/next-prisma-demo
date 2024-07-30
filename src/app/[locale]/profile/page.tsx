@@ -11,7 +11,6 @@ export default async function ProfilePage() {
   // }
 
   const user = session?.user;
-
   return (
     <>
       <Header />
@@ -19,12 +18,12 @@ export default async function ProfilePage() {
         <div className="max-w-4xl mx-auto bg-ct-dark-100 rounded-md h-[20rem] flex justify-center items-center">
           <div>
             <p className="mb-3 text-5xl text-center font-semibold">
-              Profile Page
+              Profile1 Page
             </p>
             <div className="flex items-center gap-8">
               <div>
                 <Image
-                  src={user?.image ? user.image : "/images/default.png"}
+                  src={user?.image ? user.image : "/default.png"}
                   alt={`profile photo of ${user?.name}`}
                   width={90}
                   height={90}
