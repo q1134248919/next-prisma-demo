@@ -13,11 +13,17 @@ const Header = () => {
   };
 
   return (
-    <header className="bg-white h-20">
+    <header className="  h-20 font-Poppins z-10 shadow-md border-b border-blue-100 divide-solid fixed w-full bg-gray-100     ">
       <nav className="h-full flex justify-between container items-center">
         <div>
-          <Link href="/" className="text-ct-dark-600 text-2xl font-semibold">
-            CodevoWeb
+          <Link
+            href="/"
+            className="text-ct-dark-600 flex gap-2 text-2xl font-serif  font-bold"
+          >
+            <div>Blog</div>
+            <div className="    bg-clip-text  text-transparent  bg-gradient-to-r    from-fuchsia-600 bg-pink-600 ">
+              Lab
+            </div>
           </Link>
         </div>
         <ul className="flex items-center space-x-4">

@@ -7,132 +7,112 @@ import { useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { signIn } from "next-auth/react";
 import { LoginUserInput, loginUserSchema } from "@/lib/user-schema";
-import { message } from "antd";
+import { Button, Form, Input, message } from "antd";
+import { sendEmail } from "@/lib/email";
 
 export const LoginForm = () => {
   const router = useRouter();
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-
   const searchParams = useSearchParams();
 
   const methods = useForm<LoginUserInput>({
     resolver: zodResolver(loginUserSchema),
   });
+  const getMsg = (error: string) => {
+    let msg = "";
+    switch (error) {
+      case "CredentialsSignin":
+        msg = "验证码错误";
+        break;
+      case "CallbackRouteError":
+        msg = "验证码已经过期";
+        break;
+      case "AuthError":
+        msg = "賬號密碼錯誤";
+        break;
+    }
 
-  const {
-    reset,
-    handleSubmit,
-    register,
-    formState: { errors },
-  } = methods;
-
+    return msg;
+  };
   const onSubmitHandler: SubmitHandler<LoginUserInput> = async (values) => {
     try {
-      setSubmitting(true);
-
       const res = await signIn("credentials", {
-        redirect: false,
         email: values.email,
         password: values.password,
+        code: values.code,
+        redirect: false,
       });
-
-      setSubmitting(false);
-      if (!res?.error) {
-        message.success("successfully logged in");
-        router.push("/profile");
+      if (res?.error) {
+        message.error(getMsg(res?.error));
       } else {
-        reset({ password: "" });
-        const msg = "invalid email or password";
-        message.error(msg);
-        setError(msg);
+        router.push("/profile");
+        message.success("successfully logged in");
       }
     } catch (error: any) {
+      console.log(error, "res");
       message.error(error.message);
       setError(error.message);
-    } finally {
-      setSubmitting(false);
     }
   };
 
-  const input_style =
-    "form-control block w-full px-4 py-5 text-sm font-normal text-gray-700 bg-white bg-clip-padding border border-solid border-gray-300 rounded transition ease-in-out m-0 focus:text-gray-700 focus:bg-white focus:border-blue-600 focus:outline-none";
-
+  const [form] = Form.useForm();
+  const email = Form.useWatch("email", form);
   return (
-    <form onSubmit={handleSubmit(onSubmitHandler)}>
-      {error && (
-        <p className="text-center bg-red-300 py-4 mb-6 rounded">{error}</p>
-      )}
-      <div className="mb-6">
-        <input
-          type="email"
-          {...register("email")}
-          placeholder="Email address"
-          className={`${input_style}`}
-        />
-        {errors["email"] && (
-          <span className="text-red-500 text-xs pt-1 block">
-            {errors["email"]?.message as string}
-          </span>
-        )}
-      </div>
-      <div className="mb-6">
-        <input
-          type="password"
-          {...register("password")}
-          placeholder="Password"
-          className={`${input_style}`}
-        />
-        {errors["password"] && (
-          <span className="text-red-500 text-xs pt-1 block">
-            {errors["password"]?.message as string}
-          </span>
-        )}
-      </div>
-      <button
-        type="submit"
-        style={{ backgroundColor: `${submitting ? "#ccc" : "#3446eb"}` }}
-        className="inline-block px-7 py-4 bg-blue-600 text-white font-medium text-sm leading-snug uppercase rounded shadow-md hover:bg-blue-700 hover:shadow-lg focus:bg-blue-700 focus:shadow-lg focus:outline-none focus:ring-0 active:bg-blue-800 active:shadow-lg transition duration-150 ease-in-out w-full"
-        disabled={submitting}
+    <Form
+      name="basic"
+      form={form}
+      labelCol={{ span: 8 }}
+      wrapperCol={{ span: 16 }}
+      onFinish={onSubmitHandler}
+      autoComplete="off"
+    >
+      <Form.Item
+        label="email"
+        name="email"
+        rules={[{ required: true, message: "Please input your username!" }]}
       >
-        {submitting ? "loading..." : "Sign In"}
-      </button>
+        <Input />
+      </Form.Item>
 
-      <div className="flex items-center my-4 before:flex-1 before:border-t before:border-gray-300 before:mt-0.5 after:flex-1 after:border-t after:border-gray-300 after:mt-0.5">
-        <p className="text-center font-semibold mx-4 mb-0">OR</p>
-      </div>
+      <Form.Item
+        label="Password"
+        name="password"
+        rules={[{ required: true, message: "Please input your password!" }]}
+      >
+        <Input.Password />
+      </Form.Item>
+      <Form.Item
+        label="code"
+        name="code"
+        rules={[{ required: true, message: "Please input your username!" }]}
+      >
+        <Input
+          suffix={
+            <Button
+              size="small"
+              onClick={() => {
+                sendEmail(email);
+              }}
+              style={{
+                border: "none",
+                color: "#0270DF",
 
-      <a
-        className="px-7 py-2 text-white font-medium text-sm leading-snug uppercase rounded shadow-md hover:shadow-lg focus:shadow-lg focus:outline-none focus:ring-0 active:shadow-lg transition duration-150 ease-in-out w-full flex justify-center items-center mb-3"
-        style={{ backgroundColor: "#3b5998" }}
-        onClick={() => signIn("google", { callbackUrl })}
-        role="button"
-      >
-        <Image
-          className="pr-2"
-          src="/google.svg"
-          alt=""
-          style={{ height: "2rem" }}
-          width={35}
-          height={35}
+                padding: "0px",
+                fontSize: 12,
+              }}
+            >
+              发送验证码
+            </Button>
+          }
         />
-        Continue with Google
-      </a>
-      <a
-        className="px-7 py-2 text-white font-medium text-sm leading-snug uppercase rounded shadow-md hover:shadow-lg focus:shadow-lg focus:outline-none focus:ring-0 active:shadow-lg transition duration-150 ease-in-out w-full flex justify-center items-center"
-        style={{ backgroundColor: "#55acee" }}
-        onClick={() => signIn("github", { callbackUrl })}
-        role="button"
-      >
-        <Image
-          className="pr-2"
-          src="/github.svg"
-          alt=""
-          width={40}
-          height={40}
-        />
-        Continue with GitHub
-      </a>
-    </form>
+      </Form.Item>
+
+      <Form.Item wrapperCol={{ offset: 8, span: 16 }}>
+        <Button type="primary" htmlType="submit">
+          Submit
+        </Button>
+      </Form.Item>
+    </Form>
   );
 };

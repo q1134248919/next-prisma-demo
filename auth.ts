@@ -1,4 +1,4 @@
-import NextAuth from "next-auth";
+import NextAuth, { AuthError } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import prisma from "./prisma/prisma";
 import github from "next-auth/providers/github";
@@ -25,28 +25,9 @@ export const authConfig = NextAuth({
           placeholder: "example@example.com",
         },
         password: { label: "Password", type: "password" },
-        name: { label: "Password", type: "password" },
+        code: { label: "code", type: "string" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials.password) {
-          throw new Error("未填寫完整");
-        }
-        if (credentials.name && credentials?.email) {
-          const user = await prisma.user.findUnique({
-            where: {
-              email: String(credentials.email),
-            },
-          });
-          if (user) {
-            return {
-              id: user.id,
-              email: user.email,
-              name: user.name,
-              randomKey: "Hey cool",
-            };
-          }
-        }
-
         const user = await prisma.user.findUnique({
           where: {
             email: String(credentials.email),
@@ -55,9 +36,26 @@ export const authConfig = NextAuth({
 
         if (
           !user ||
-          !(await bcrypt.compare(String(credentials.password), user.password!))
+          !(await bcrypt.compare(
+            String(credentials.password),
+            user.password || ""
+          ))
         ) {
-          throw new Error("賬號密碼錯誤");
+          throw new AuthError("賬號密碼錯誤");
+        }
+
+        const codeVal = await prisma.verificationRequest.findUnique({
+          where: {
+            email: credentials?.email as string,
+          },
+        });
+        const { code = "", expires } = codeVal || {};
+
+        if (!(await bcrypt.compare(String(credentials.code), code))) {
+          return null;
+        }
+        if (expires && expires < new Date()) {
+          throw new Error("验证码已经过期");
         }
 
         return {
@@ -73,16 +71,17 @@ export const authConfig = NextAuth({
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
-      const paths = ["/profile", "/client-side"];
-      const isProtected = paths.some((path) =>
-        nextUrl.pathname.startsWith(path)
-      );
+      const paths = ["/", "/login", "/register"];
 
-      if (isProtected && !isLoggedIn) {
+      if (isLoggedIn && nextUrl.pathname == "/login") {
+        return Response.redirect(new URL("/profile", nextUrl));
+      }
+
+      if (!isLoggedIn && !paths.includes(nextUrl.pathname)) {
         const redirectUrl = new URL("/login", nextUrl.origin);
-        redirectUrl.searchParams.append("callbackUrl", nextUrl.href);
         return Response.redirect(redirectUrl);
       }
+
       return true;
     },
     jwt: ({ token, user }) => {

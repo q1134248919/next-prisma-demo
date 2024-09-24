@@ -1,16 +1,21 @@
+import { auth } from "@/auth";
 import Header from "@/components/header";
 
-export default function Home() {
+const Home = async () => {
+  const session = await auth();
+  const { user } = session || {};
+
+  const { name } = user || {};
   return (
     <>
       <Header />
-      <section className="bg-ct-blue-600 min-h-screen pt-20">
-        <div className="max-w-4xl mx-auto bg-ct-dark-100 rounded-md h-[20rem] flex justify-center items-center">
-          <p className="text-3xl font-semibold">
-            Implement Authentication with NextAuth in Next.js 14
-          </p>
-        </div>
+      <section
+        style={{ backgroundImage: `url(/bg.jpg)` }}
+        className=" flex flex-col h-screen font-serif bg-bottom  bg-no-repeat  font-bold  text-3xl  md:text-6xl  items-center justify-center fons bg-cover    "
+      >
+        Welcome Back {name}
       </section>
     </>
   );
-}
+};
+export default Home;

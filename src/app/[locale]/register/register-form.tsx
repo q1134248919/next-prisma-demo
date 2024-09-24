@@ -7,7 +7,6 @@ import { CreateUserInput, createUserSchema } from "@/lib/user-schema";
 import { handleResign } from "@/lib/actions";
 import { useCreateBlog } from "./api";
 import { useTranslations } from "next-intl";
-import { signIn } from "@/auth";
 import { useRouter } from "next/navigation";
 
 export const RegisterForm = () => {
@@ -22,11 +21,7 @@ export const RegisterForm = () => {
   const onFinish: SubmitHandler<CreateUserInput> = async (values: any) => {
     try {
       await handleResign(values);
-      await signIn("credentials", {
-        redirect: false,
-        ...values,
-      });
-      router.push("/profile");
+      router.push("/login");
     } catch (error: any) {
       message.error(error.message);
     } finally {

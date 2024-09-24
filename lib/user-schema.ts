@@ -29,6 +29,10 @@ export const loginUserSchema = object({
     1,
     "Password is required"
   ),
+  code: string({ required_error: "code is required" }).min(
+    1,
+    "code is required"
+  ),
 });
 
 export type LoginUserInput = TypeOf<typeof loginUserSchema>;

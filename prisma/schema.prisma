@@ -59,12 +59,33 @@ model Session {
 }
 
 model VerificationRequest {
-  id         String   @id @default(cuid())
-  identifier String
-  token      String   @unique
-  expires    DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String   @id @default(cuid())
+  email     String   @unique
+  token     String   @unique
+  code      String
+  expires   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@unique([identifier, token])
+  @@map("verification_request")
+}
+
+model Post {
+  id         Int        @id @default(autoincrement())
+  title      String
+  content    String
+  url        String[]
+  categories Category[]
+  createdAt  DateTime   @default(now())
+
+  @@map("post")
+}
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String
+  posts     Post[]
+  createdAt DateTime @default(now())
+
+  @@map("category")
 }
